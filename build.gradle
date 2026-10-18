@@ -156,3 +156,28 @@ jar {
 //update access widener during intellij sync
 this.tasks.ideaSyncTask.dependsOn("updateAccessWidener")
 this.tasks.configureLaunch.dependsOn("updateAccessWidener")
+// SharedCapes standalone network verification
+// These tests use a Java main() rather than JUnit.
+tasks.named('test', Test) {
+    failOnNoDiscoveredTests = false
+}
+
+tasks.register('testSharedCapesNetwork', JavaExec) {
+    group = 'verification'
+    description = 'Run SharedCapes network security and protocol checks'
+
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'org.example.sharedcapes.net.CapeDirectoryClientTest'
+    jvmArgs '--add-modules=jdk.httpserver'
+}
+
+tasks.named('check') {
+    dependsOn tasks.named('testSharedCapesNetwork')
+}
+
+// Ensure RusherHack's access widener is generated
+// before Fabric Loom attempts to validate it.
+tasks.named('validateAccessWidener') {
+    dependsOn tasks.named('updateAccessWidener')
+}
