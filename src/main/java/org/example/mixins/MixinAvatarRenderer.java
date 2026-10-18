@@ -20,11 +20,14 @@ public class MixinAvatarRenderer {
 
 	@Inject(method = "extractRenderState(Lnet/minecraft/world/entity/Avatar;Lnet/minecraft/client/renderer/entity/state/AvatarRenderState;F)V", at = @At("TAIL"))
 	private void onExtractRenderState(Avatar entity, AvatarRenderState state, float partialTick, CallbackInfo ci) {
-		if(CustomCapesPlugin.INSTANCE == null || entity != Minecraft.getInstance().player || state.skin == null) {
+		if(CustomCapesPlugin.INSTANCE == null || state.skin == null) {
 			return;
 		}
 
-		final ClientAsset.ResourceTexture cape = CustomCapesPlugin.INSTANCE.getCapeManager().getActiveCape();
+		final boolean isLocalPlayer = entity == Minecraft.getInstance().player;
+		final ClientAsset.ResourceTexture cape = isLocalPlayer
+				? CustomCapesPlugin.INSTANCE.getCapeManager().getActiveCape()
+				: CustomCapesPlugin.INSTANCE.getCapeManager().getSharedCape(entity.getUUID());
 		if(cape == null) {
 			return;
 		}

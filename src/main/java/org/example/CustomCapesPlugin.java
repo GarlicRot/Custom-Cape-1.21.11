@@ -34,6 +34,8 @@ public class CustomCapesPlugin extends Plugin {
 	@Override
 	public void onUnload() {
 		RusherHackAPI.getEventBus().unsubscribe(this);
+		if(this.capeManager != null) this.capeManager.close();
+		INSTANCE = null;
 	}
 
 	@Subscribe
@@ -41,6 +43,7 @@ public class CustomCapesPlugin extends Plugin {
 		if(!this.attached) {
 			this.attached = this.capeManager.tryAttach();
 		}
+		this.capeManager.tickSharedCapes();
 	}
 
 	public CapeManager getCapeManager() {

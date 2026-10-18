@@ -11,6 +11,8 @@ import org.rusherhack.client.api.feature.module.IModule;
 import org.rusherhack.core.interfaces.IToggleable;
 import org.rusherhack.core.logging.ILogger;
 import org.rusherhack.core.setting.StringSetting;
+import org.rusherhack.core.setting.BooleanSetting;
+import org.example.sharedcapes.render.RemoteCapeManager;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -23,6 +25,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Stream;
 
 /**
@@ -37,6 +40,8 @@ public class CapeManager {
 	private final ILogger logger;
 
 	private final StringSetting customCape = new StringSetting("Custom Cape", "Pick a png from the rusherhack/capes folder", NONE, NONE);
+	private final BooleanSetting showSharedCapes = new BooleanSetting("Show Shared Capes", "Show verified cape textures for other players (opt-in)", false);
+	private RemoteCapeManager remoteCapes;
 
 	//file name -> loaded texture, filled lazily on the render thread
 	private final Map<String, ClientAsset.ResourceTexture> textures = new HashMap<>();
@@ -66,6 +71,7 @@ public class CapeManager {
 			this.logger.error("Failed to create capes folder " + this.capesDir, e);
 		}
 
+		this.remoteCapes = new RemoteCapeManager(this.logger, this.capesDir);
 		this.scan();
 	}
 
@@ -85,7 +91,7 @@ public class CapeManager {
 		}
 
 		this.capesModule = module.get();
-		this.capesModule.registerSettings(this.customCape);
+		this.capesModule.registerSettings(this.customCape, this.showSharedCapes);
 		this.logger.info("Added Custom Cape setting to Capes module");
 		return true;
 	}
@@ -196,6 +202,25 @@ public class CapeManager {
 		} catch(IOException e) {
 			this.logger.warn("Failed to save selected cape");
 		}
+	}
+
+	/** Called only on the main client thread, never performs network IO directly. */
+	public void tickSharedCapes() {
+		if(this.remoteCapes != null) {
+			boolean moduleEnabled = this.capesModule instanceof IToggleable toggleable && toggleable.isToggled();
+			this.remoteCapes.tick(this.showSharedCapes.getValue() && moduleEnabled);
+		}
+	}
+
+	/** The mixin calls this for other players, never the local player. */
+	public ClientAsset.ResourceTexture getSharedCape(UUID player) {
+		if(this.remoteCapes == null || !this.showSharedCapes.getValue()) return null;
+		if(this.capesModule instanceof IToggleable toggleable && !toggleable.isToggled()) return null;
+		return this.remoteCapes.get(player);
+	}
+
+	public void close() {
+		if(this.remoteCapes != null) this.remoteCapes.close();
 	}
 
 	public Path getCapesDir() {
