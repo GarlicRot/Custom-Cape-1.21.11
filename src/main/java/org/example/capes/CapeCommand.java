@@ -15,6 +15,11 @@ public class CapeCommand extends Command {
 		this.capeManager = capeManager;
 	}
 
+	@CommandExecutor(subCommand = "status")
+	private String status() {
+		return "SharedCapes: " + this.capeManager.getSharedStatus();
+	}
+
 	@CommandExecutor(subCommand = "reload")
 	private String reload() {
 		final int count = this.capeManager.reload();
