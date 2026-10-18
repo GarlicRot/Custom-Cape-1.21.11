@@ -194,3 +194,15 @@ tasks.register('testSharedCapesPublish', JavaExec) {
 tasks.named('check') {
     dependsOn tasks.named('testSharedCapesPublish')
 }
+
+// Standalone automatic-sharing policy checks.
+tasks.register('testSharedCapesPolicy', JavaExec) {
+    group = 'verification'
+    description = 'Check publishing selection and automatic unpublishing rules'
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'org.example.sharedcapes.publish.CapeSelectionPolicyTest'
+}
+tasks.named('check') {
+    dependsOn tasks.named('testSharedCapesPolicy')
+}

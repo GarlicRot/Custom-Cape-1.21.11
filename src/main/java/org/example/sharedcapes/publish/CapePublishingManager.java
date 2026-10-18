@@ -20,7 +20,7 @@ public final class CapePublishingManager implements AutoCloseable {
     private final CapePublishingClient publisher;
     private UUID previouslyPublished;
     private String publishedFingerprint;
-    private String status = "Sharing disabled";
+    private String status = "No cape selected";
     private long nextPollAt, retryAt;
     private boolean busy, closed;
 
@@ -45,13 +45,18 @@ public final class CapePublishingManager implements AutoCloseable {
     public String status() { return status; }
 
     /** Called from EventUpdate; never blocks for network operations. */
-    public void tick(boolean shareEnabled, String selected) {
+    public void tick(boolean capesModuleEnabled, String selected) {
         if (closed || busy) return;
         long now = System.currentTimeMillis();
         if (now < retryAt || now < nextPollAt) return;
         nextPollAt = now + 3000;
+        boolean shouldPublish = CapeSelectionPolicy.shouldPublish(capesModuleEnabled, selected);
+        if (!shouldPublish && previouslyPublished == null) {
+            status = capesModuleEnabled ? "No cape selected" : "Capes module disabled";
+            return;
+        }
         if (publisher == null) {
-            status = shareEnabled || previouslyPublished != null ? "No SharedCapes endpoint configured" : "Sharing disabled";
+            status = "No SharedCapes endpoint configured";
             return;
         }
         User user = Minecraft.getInstance().getUser();
@@ -64,9 +69,8 @@ public final class CapePublishingManager implements AutoCloseable {
             status = "Switch to the originally published account to unshare";
             return;
         }
-        if (!shareEnabled || selected == null || selected.equals("None")) {
-            if (previouslyPublished == null) status = "Sharing disabled";
-            else remove(user.getName(), uuid, user.getAccessToken());
+        if (!shouldPublish) {
+            remove(user.getName(), uuid, user.getAccessToken());
             return;
         }
         Path cape = capesDir.resolve(selected).normalize();
