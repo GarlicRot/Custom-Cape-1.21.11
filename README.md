@@ -16,6 +16,8 @@ Wear any cape you want. **Custom Cape** is a RusherHack core plugin that adds a 
 - **Zero setup** — the `rusherhack/capes/` folder is created on first launch.
 - **Multiplayer sharing** — automatically share your selected cape with other plugin users, with no additional configuration.
 
+When a player selects a cape, the plugin verifies their Minecraft account through Mojang and uploads their cape image to the SharedCapes service. The server associates that image with their Minecraft UUID, allowing other players with the plugin to automatically download and display it.
+
 ## Installation
 
 1. Add the JVM flag `-Drusherhack.enablePlugins=true` to your Minecraft JVM arguments.
