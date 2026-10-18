@@ -1,16 +1,15 @@
 {
-  "Plugin-Class": "org.example.ExamplePlugin",
+  "Plugin-Class": "org.example.CustomCapesPlugin",
   "Name": "${project.plugin_name}",
   "Version": "${project.plugin_version}",
-  "Description": "Example rusherhack core plugin",
-  "URL": "https://github.com/RusherDevelopment/example-core-plugin",
+  "Description": "Custom capes and elytras for the Capes module",
   "Authors": [
-    "John200410"
+    "Esat32"
   ],
   "Minecraft-Versions": [
     "${project.minecraft_version}"
   ],
   "Mixin-Configs": [
-    "mixins.example-plugin.json"
+    "mixins.custom-capes.json"
   ]
 }
