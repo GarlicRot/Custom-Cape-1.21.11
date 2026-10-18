@@ -36,6 +36,16 @@ import java.util.regex.Pattern;
  * Authentication/upload and texture registration belong to later stages.
  */
 public final class CapeDirectoryClient implements AutoCloseable {
+    public static final String DEFAULT_ENDPOINT = "https://capes.garlicrot.dev";
+    public static final String ENDPOINT_PROPERTY = "sharedcapes.apiBaseUrl";
+
+    public static String configuredEndpoint() {
+        String override = System.getProperty(ENDPOINT_PROPERTY);
+        if (override == null || override.isBlank()) {
+            return DEFAULT_ENDPOINT;
+        }
+        return override.trim();
+    }
     public static final int PROTOCOL = 1;
     public static final int MAX_BATCH = 64;
     public static final int MAX_PNG_BYTES = 256 * 1024;

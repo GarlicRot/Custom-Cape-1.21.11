@@ -33,7 +33,7 @@ import java.util.regex.Pattern;
 public final class CapePublishingClient implements AutoCloseable {
     private static final Pattern USERNAME = Pattern.compile("[A-Za-z0-9_]{3,16}");
     private static final Pattern HASH = Pattern.compile("[0-9a-f]{64}");
-    private static final Pattern SERVER_ID = Pattern.compile("[0-9a-f]{64}");
+    private static final Pattern SERVER_ID = Pattern.compile("[0-9a-f]{40}");
     private static final Pattern BEARER = Pattern.compile("[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+");
     private static final URI MOJANG_JOIN = URI.create("https://sessionserver.mojang.com/session/minecraft/join");
     private final URI origin;
@@ -153,6 +153,7 @@ public final class CapePublishingClient implements AutoCloseable {
             if (body != null) try (OutputStream out = connection.getOutputStream()) { out.write(body); }
             int status = connection.getResponseCode();
             if (status != expected) {
+                if (status == 403 && url.equals(MOJANG_JOIN)) throw new IOException("Minecraft join rejected: " + safeMojang403(connection));
                 if (status == 400 && "PUT".equals(method)) throw new IOException("Cape rejected: use a plain RGB/RGBA 2:1 PNG, max 256 KiB");
                 // Don't echo server response bodies: they may contain secrets.
                 throw new IOException("Cape service " + (url.equals(MOJANG_JOIN) ? "Minecraft join" : "API") + " returned HTTP " + status);
@@ -168,6 +169,34 @@ public final class CapePublishingClient implements AutoCloseable {
                 return result;
             }
         } finally { connection.disconnect(); }
+    }
+
+    /** Never expose raw Mojang bodies, credentials or arbitrary remote error text. */
+    private static String safeMojang403(HttpURLConnection connection) {
+        try (InputStream in = connection.getErrorStream()) {
+            if (in == null) return "HTTP 403 (reason unavailable)";
+            byte[] body = in.readNBytes(2049);
+            if (body.length > 2048) return "HTTP 403 (reason unavailable)";
+            return classifyMojang403(body);
+        } catch (Exception ignored) {
+            return "HTTP 403 (reason unavailable)";
+        }
+    }
+
+    // Package-private to test with dummy Mojang error responses.
+    static String classifyMojang403(byte[] body) {
+        try {
+            Object data = CapeDirectoryClient.Json.parse(new String(body, StandardCharsets.UTF_8));
+            if (data instanceof Map<?, ?> obj) {
+                Object code = obj.get("error"), detail = obj.get("errorMessage");
+                if ("InsufficientPrivilegesException".equals(code)) return "multiplayer permission denied";
+                if ("UserBannedException".equals(code)) return "multiplayer account restricted";
+                if ("ForbiddenOperationException".equals(code) && detail instanceof String msg &&
+                        msg.toLowerCase(java.util.Locale.ROOT).contains("token"))
+                    return "invalid session token (refresh Prism account login)";
+            }
+        } catch (Exception ignored) { /* Never log arbitrary auth responses. */ }
+        return "HTTP 403 (reason unavailable)";
     }
 
     private static Map<?, ?> json(byte[] bytes) throws IOException {

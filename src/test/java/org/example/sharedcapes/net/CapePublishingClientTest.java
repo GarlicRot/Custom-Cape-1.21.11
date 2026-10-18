@@ -21,7 +21,7 @@ public final class CapePublishingClientTest {
     static final UUID USER = UUID.fromString("12345678-1234-1234-1234-1234567890ab");
     static final String COMPACT = CapeDirectoryClient.compactUuid(USER);
     static final String CHALLENGE = "30a49a74-f6e3-4c84-a6ee-96d4ea1a30b0";
-    static final String SERVER_ID = "a".repeat(64);
+    static final String SERVER_ID = "a".repeat(40);
     static final String BEARER = "aabbcc.ddeeff";
     static final AtomicInteger checks = new AtomicInteger();
 
@@ -30,6 +30,7 @@ public final class CapePublishingClientTest {
         exercisesPublishAndUnpublish();
         rejectsWrongProfile();
         rejectsInvalidCape();
+        checksMojangForbiddenClassification();
         System.out.println("OK: " + checks.get() + " publishing-core checks passed");
     }
 
@@ -100,6 +101,18 @@ public final class CapePublishingClientTest {
             try { client.publishWithProof("TestPlayer", USER, file, id -> {}).get(); throw new AssertionError("Invalid cape accepted"); }
             catch (ExecutionException expected) { pass("Rejected malformed PNG before network"); }
         } finally { Files.deleteIfExists(file); }
+    }
+
+    static void checksMojangForbiddenClassification() {
+        String invalidToken = "{\"error\":\"ForbiddenOperationException\",\"errorMessage\":\"Invalid token.\"}";
+        check("invalid session token (refresh Prism account login)".equals(
+            CapePublishingClient.classifyMojang403(invalidToken.getBytes(StandardCharsets.UTF_8))), "Identify invalid session token");
+        String forbidden = "{\"error\":\"InsufficientPrivilegesException\"}";
+        check("multiplayer permission denied".equals(
+            CapePublishingClient.classifyMojang403(forbidden.getBytes(StandardCharsets.UTF_8))), "Identify disabled multiplayer permissions");
+        String untrusted = "{\"error\":\"something-else\",\"accessToken\":\"DONT-LEAK-ME\"}";
+        check(!CapePublishingClient.classifyMojang403(untrusted.getBytes(StandardCharsets.UTF_8)).contains("DONT-LEAK-ME"),
+            "Untrusted authentication response never exposed");
     }
 
     static byte[] png() throws Exception {

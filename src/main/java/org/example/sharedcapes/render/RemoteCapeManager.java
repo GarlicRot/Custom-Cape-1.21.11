@@ -54,17 +54,12 @@ public final class RemoteCapeManager implements AutoCloseable {
     public RemoteCapeManager(ILogger logger, Path capesDirectory) {
         this.logger = logger;
         CapeDirectoryClient configured = null;
-        Path urlFile = capesDirectory.resolve("sharedcapes-url.txt");
-        if (Files.isRegularFile(urlFile)) {
-            try {
-                String address = Files.readString(urlFile, StandardCharsets.UTF_8).trim();
-                if (!address.isEmpty()) {
-                    configured = new CapeDirectoryClient(address);
-                    logger.info("SharedCapes directory configured; other players' capes visible when Capes is enabled");
-                }
-            } catch (IOException | IllegalArgumentException e) {
-                logger.warn("Invalid SharedCapes endpoint file; remote capes disabled");
-            }
+        try {
+            String endpoint = CapeDirectoryClient.configuredEndpoint();
+            configured = new CapeDirectoryClient(endpoint);
+            logger.info("SharedCapes directory enabled");
+        } catch (IllegalArgumentException e) {
+            logger.warn("Invalid SharedCapes endpoint; remote capes disabled");
         }
         this.directory = configured;
     }

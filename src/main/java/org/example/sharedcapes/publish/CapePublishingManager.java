@@ -2,6 +2,7 @@ package org.example.sharedcapes.publish;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.User;
+import org.example.sharedcapes.net.CapeDirectoryClient;
 import org.example.sharedcapes.net.CapePublishingClient;
 import org.rusherhack.core.logging.ILogger;
 
@@ -32,12 +33,10 @@ public final class CapePublishingManager implements AutoCloseable {
             if (Files.isRegularFile(marker)) previouslyPublished = UUID.fromString(Files.readString(marker, StandardCharsets.UTF_8).trim());
         } catch (IOException | IllegalArgumentException ex) { logger.warn("SharedCapes published marker is unreadable"); }
         CapePublishingClient configured = null;
-        Path endpoint = capesDir.resolve("sharedcapes-url.txt");
-        if (Files.isRegularFile(endpoint)) {
-            try {
-                String url = Files.readString(endpoint, StandardCharsets.UTF_8).trim();
-                if (!url.isEmpty()) configured = new CapePublishingClient(url);
-            } catch (IOException | IllegalArgumentException ex) { logger.warn("SharedCapes publisher endpoint is invalid"); }
+        try {
+            configured = new CapePublishingClient(CapeDirectoryClient.configuredEndpoint());
+        } catch (IllegalArgumentException ex) {
+            logger.warn("SharedCapes publisher endpoint is invalid");
         }
         publisher = configured;
     }
@@ -96,8 +95,9 @@ public final class CapePublishingManager implements AutoCloseable {
                     if (closed) return;
                     if (error != null) {
                         retryAt = System.currentTimeMillis() + 300000;
-                        status = "Publish failed; retry in 5 min";
-                        logger.warn("SharedCapes publish failed (authentication, network, or cape format)");
+                        String detail = safeFailureReason(error);
+                        status = "Publish failed: " + detail + "; retry in 5 min";
+                        logger.warn("SharedCapes publishing failure: " + detail);
                     } else {
                         previouslyPublished = uuid;
                         publishedFingerprint = fingerprint;
@@ -131,6 +131,59 @@ public final class CapePublishingManager implements AutoCloseable {
                         logger.info("SharedCapes unpublished cape");
                     }
                 }));
+    }
+
+    /** Human-readable error reasons with a strict allowlist: never log session or bearer tokens. */
+    private static String safeFailureReason(Throwable throwable) {
+        Throwable cause = throwable;
+        for (int depth = 0; depth < 6 && cause.getCause() != null; depth++) {
+            // CompletableFuture commonly wraps the original IOException.
+            if (!(cause instanceof java.util.concurrent.CompletionException) &&
+                    !(cause instanceof java.util.concurrent.ExecutionException)) break;
+            cause = cause.getCause();
+        }
+        if (cause instanceof java.net.ConnectException) return "Local API connection refused";
+        if (cause instanceof java.net.SocketTimeoutException) return "Network timeout";
+        if (cause instanceof java.net.UnknownHostException) return "API hostname could not be resolved";
+        if (cause instanceof javax.net.ssl.SSLException) return "TLS connection failure";
+        if (cause instanceof java.io.IOException) {
+            String message = cause.getMessage();
+            if (message != null) {
+                if (message.matches("Cape service (API|Minecraft join) returned HTTP [0-9]{3}"))
+                    return message;
+                if (message.equals("Minecraft join rejected: invalid session token (refresh Prism account login)") ||
+                        message.equals("Minecraft join rejected: multiplayer permission denied") ||
+                        message.equals("Minecraft join rejected: multiplayer account restricted") ||
+                        message.equals("Minecraft join rejected: HTTP 403 (reason unavailable)"))
+                    return message;
+                if (message.equals("Cape missing, symbolic link, or over 256 KiB"))
+                    return "Cape file missing or exceeds 256 KiB";
+                if (message.equals("Invalid cape PNG length") || message.equals("Invalid PNG signature") ||
+                        message.equals("Missing PNG IHDR") || message.equals("Unsupported cape format"))
+                    return "Unsupported cape PNG format";
+                if (message.equals("Verified Minecraft account differs from active profile"))
+                    return "Verified Minecraft account mismatch";
+                if (message.equals("Publisher response did not match account/cape"))
+                    return "Published cape identity/hash mismatch";
+                if (message.equals("Invalid published cape path"))
+                    return "Invalid published cape path";
+                if (message.equals("Invalid publisher token"))
+                    return "Invalid publisher token";
+                if (message.equals("No valid Minecraft session token"))
+                    return "Minecraft session is missing or invalid";
+                if (message.equals("Invalid challenge ID") || message.equals("Invalid session proof challenge"))
+                    return "Invalid authentication challenge";
+                if (message.equals("Unexpected API response type") || message.equals("Expected JSON object") ||
+                        message.equals("Invalid API field") || message.equals("API response too large") ||
+                        message.equals("Unexpected removal response"))
+                    return "Unexpected API response";
+            }
+            return "I/O failure (" + cause.getClass().getSimpleName() + ")";
+        }
+        if (cause instanceof IllegalArgumentException) return "Invalid profile or cape selection";
+        if (cause instanceof SecurityException) return "Permission/security exception";
+        // Only the exception class is included; arbitrary exception text can contain credentials.
+        return "Client exception (" + cause.getClass().getSimpleName() + ")";
     }
 
     @Override public void close() {
