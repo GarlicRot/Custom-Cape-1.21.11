@@ -181,3 +181,16 @@ tasks.named('check') {
 tasks.named('validateAccessWidener') {
     dependsOn tasks.named('updateAccessWidener')
 }
+
+// Standalone SharedCapes publishing protocol tests (no Minecraft credentials).
+tasks.register('testSharedCapesPublish', JavaExec) {
+    group = 'verification'
+    description = 'Run opt-in authentication and publishing protocol mock tests'
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'org.example.sharedcapes.net.CapePublishingClientTest'
+    jvmArgs '--add-modules=jdk.httpserver,java.desktop'
+}
+tasks.named('check') {
+    dependsOn tasks.named('testSharedCapesPublish')
+}

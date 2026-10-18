@@ -13,6 +13,7 @@ import org.rusherhack.core.logging.ILogger;
 import org.rusherhack.core.setting.StringSetting;
 import org.rusherhack.core.setting.BooleanSetting;
 import org.example.sharedcapes.render.RemoteCapeManager;
+import org.example.sharedcapes.publish.CapePublishingManager;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -41,7 +42,9 @@ public class CapeManager {
 
 	private final StringSetting customCape = new StringSetting("Custom Cape", "Pick a png from the rusherhack/capes folder", NONE, NONE);
 	private final BooleanSetting showSharedCapes = new BooleanSetting("Show Shared Capes", "Show verified cape textures for other players (opt-in)", false);
+	private final BooleanSetting shareMyCape = new BooleanSetting("Share My Cape", "Publish the selected cape through the configured service (opt-in)", false);
 	private RemoteCapeManager remoteCapes;
+	private CapePublishingManager publisher;
 
 	//file name -> loaded texture, filled lazily on the render thread
 	private final Map<String, ClientAsset.ResourceTexture> textures = new HashMap<>();
@@ -72,6 +75,7 @@ public class CapeManager {
 		}
 
 		this.remoteCapes = new RemoteCapeManager(this.logger, this.capesDir);
+		this.publisher = new CapePublishingManager(this.logger, this.capesDir);
 		this.scan();
 	}
 
@@ -91,7 +95,7 @@ public class CapeManager {
 		}
 
 		this.capesModule = module.get();
-		this.capesModule.registerSettings(this.customCape, this.showSharedCapes);
+		this.capesModule.registerSettings(this.customCape, this.showSharedCapes, this.shareMyCape);
 		this.logger.info("Added Custom Cape setting to Capes module");
 		return true;
 	}
@@ -209,6 +213,7 @@ public class CapeManager {
 		if(this.remoteCapes != null) {
 			boolean moduleEnabled = this.capesModule instanceof IToggleable toggleable && toggleable.isToggled();
 			this.remoteCapes.tick(this.showSharedCapes.getValue() && moduleEnabled);
+			if(this.publisher != null) this.publisher.tick(this.shareMyCape.getValue() && moduleEnabled, this.customCape.getValue());
 		}
 	}
 
@@ -221,6 +226,11 @@ public class CapeManager {
 
 	public void close() {
 		if(this.remoteCapes != null) this.remoteCapes.close();
+		if(this.publisher != null) this.publisher.close();
+	}
+
+	public String getSharedStatus() {
+		return this.publisher == null ? "Publisher not initialized" : this.publisher.status();
 	}
 
 	public Path getCapesDir() {
