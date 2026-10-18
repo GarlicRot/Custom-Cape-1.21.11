@@ -1,6 +1,18 @@
 # Custom Cape — RusherHack 1.21.11
 
 <p align="center">
+  <a href="https://github.com/GarlicRot/Custom-Cape-1.21.11/actions/workflows/release.yml">
+    <img src="https://github.com/GarlicRot/Custom-Cape-1.21.11/actions/workflows/release.yml/badge.svg?branch=main" alt="Build Status"/>
+  </a>
+  <a href="https://github.com/GarlicRot/Custom-Cape-1.21.11/releases/latest">
+    <img src="https://img.shields.io/github/v/release/GarlicRot/Custom-Cape-1.21.11?label=Release" alt="Latest Release"/>
+  </a>
+  <img src="https://img.shields.io/badge/Minecraft-1.21.11-62B47A" alt="Minecraft 1.21.11"/>
+  <img src="https://img.shields.io/badge/Java-21-orange" alt="Java 21"/>
+</p>
+
+
+<p align="center">
   <img src="Assets/cape-preview.png" alt="Custom cape on the player" width="320"/>
 </p>
 
