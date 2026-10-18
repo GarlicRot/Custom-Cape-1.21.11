@@ -14,14 +14,15 @@ Wear any cape you want. **Custom Cape** is a RusherHack core plugin that adds a 
 - **`*cape reload`** — rescans the folder after you add or remove PNGs.
 - **Remembers your pick** — your selected cape is restored on the next launch.
 - **Zero setup** — the `rusherhack/capes/` folder is created on first launch.
+- **Multiplayer sharing** — automatically share your selected cape with other plugin users, with no additional configuration.
 
-> Client-side only: the custom cape is visible to **you**, other players don't see it.
+> **Multiplayer (this fork):** Other players with the plugin can see your selected cape when the Capes module is enabled.
 
 ## Installation
 
 1. Add the JVM flag `-Drusherhack.enablePlugins=true` to your Minecraft JVM arguments.
    > ⚠️ Make sure there is no trailing space or tab after `true`, or RusherHack silently loads 0 plugins.
-2. Download `custom-capes-1.0.0.jar` from the [Releases](https://github.com/Esat32/Custom-Cape-1.21.11/releases) page.
+2. For this fork, build from source and use `build/libs/custom-capes-0.4.2.jar`. Original releases are available from [Esat32](https://github.com/Esat32/Custom-Cape-1.21.11/releases).
 3. Put it in `.minecraft/rusherhack/plugins/`.
 4. Launch the game. This is a **core plugin** (it uses mixins), so it must be in the folder *before* launching and can't be loaded with `*reload`.
 

@@ -224,9 +224,6 @@ public class CapeManager {
 		if(this.publisher != null) this.publisher.close();
 	}
 
-	public String getSharedStatus() {
-		return this.publisher == null ? "Publisher not initialized" : this.publisher.status();
-	}
 
 	public Path getCapesDir() {
 		return this.capesDir;
